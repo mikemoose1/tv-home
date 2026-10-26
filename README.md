@@ -11,7 +11,25 @@ An Apple TV-style home screen for Samsung Tizen TVs, packaged as a
   Spotify when installed) and your other TizenBrew modules (TizenTube etc.).
 - Optional family-calendar "top shelf" fed by a small server on your own network.
 
-## Add it in TizenBrew
+## Install as a native TV app (recommended)
+
+Each [release](../../releases) has `TVHome.wgt`, a standalone Tizen web app (package `TvHomeMm01`,
+app id `TvHomeMm01.TVHome`) that shows up in the Samsung Apps list as **TV Home**.
+It is signed with a self-made Tizen author certificate and the Tizen *public* distributor
+certificate, the same way TizenBrew's own releases are signed.
+
+Install it with the [TizenBrew Installer](https://github.com/reisxd/TizenBrewInstaller):
+choose install from GitHub and enter `OWNER/tv-home`. The TV must be in Developer Mode with
+its Host PC IP set to the computer running the installer (then fully power-cycled).
+
+In the native app, tiles launch apps directly with `tizen.application.launch`; the TizenBrew
+and TizenTube tiles only appear when TizenBrew is installed. Red refreshes the calendar,
+Green opens settings, and Back on the first tile exits.
+
+Build it yourself with `scripts/build-wgt.sh` (needs [tizen.js](https://github.com/reisxd/tizen.js)
+and your own author `.p12`; updates must be signed with the same author certificate).
+
+## Or add it as a TizenBrew module
 
 TizenBrew → Module Manager → **Add GitHub Module** → type `OWNER/tv-home`
 (the GitHub owner and repo name), then open **TV Home** from the module list.

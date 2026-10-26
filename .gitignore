@@ -2,3 +2,6 @@ node_modules/
 feed/skylight.env
 feed/*.log
 /screenshot*.png
+build/
+dist/
+*.p12

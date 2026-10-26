@@ -1,7 +1,7 @@
 {
   "name": "tv-home",
   "appName": "TV Home",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Apple TV-style home screen for Samsung Tizen TVs with an optional LAN family-calendar feed.",
   "packageType": "app",
   "appPath": "app/index.html",

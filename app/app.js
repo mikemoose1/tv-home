@@ -3,7 +3,11 @@
   'use strict';
 
   var CFG = window.TVHOME_CONFIG || {};
-  var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, BACK: 10009, ESC: 27, BKSP: 8, DONE: 65376, CANCEL: 65385 };
+  // NATIVE: running as the installed TV Home .wgt with direct Tizen APIs.
+  // Otherwise: running as a TizenBrew module page (no Tizen APIs; uses the helper service).
+  var NATIVE = typeof window.tizen !== 'undefined' && !!(window.tizen.application && window.tizen.application.launch && window.tizen.application.getAppsInfo);
+  var TIZENBREW_APP = 'xvvl3S1bvH.TizenBrewStandalone';
+  var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, BACK: 10009, ESC: 27, BKSP: 8, DONE: 65376, CANCEL: 65385, RED: 403, GREEN: 404 };
   var STORE_FEED = 'tvhome.feedUrl';
   var STORE_CACHE = 'tvhome.lastFeed';
 
@@ -249,16 +253,20 @@
       if (!state.installed && a.optional && a.key !== 'jellyfin') continue;
       add({ kind: 'app', label: a.label, logo: a.logo, bg: a.bg, fg: a.fg, id: id || a.ids[0], missing: !!state.installed && !id });
     }
-    // TizenBrew modules (TizenTube etc.) from TizenBrew's own module list
-    var mods = state.modules;
-    if (!mods) mods = [{ name: '@foxreis/tizentube', moduleType: 'npm', appName: 'TizenTube' }];
-    for (var m = 0; m < mods.length; m++) {
-      var md = mods[m];
-      if (String(md.name).indexOf(CFG.selfModule) >= 0 || md.appName === 'TV Home') continue;
-      if (md.appName === 'Unknown Module') continue;
-      var isTT = /tizentube/i.test(md.name);
-      add({ kind: 'module', label: md.appName + ' (TizenBrew)', logo: isTT ? '<span class="glyph">&#9654;</span>&nbsp;TizenTube' : esc(md.appName),
-        bg: isTT ? 'linear-gradient(135deg,#3a0d0d,#b3161b)' : 'linear-gradient(135deg,#1d2a44,#3d5a8a)', fg: '#fff', name: md.name, type: md.moduleType });
+    // TizenBrew modules (TizenTube etc.). In native mode only when TizenBrew is installed.
+    var hasTB = !NATIVE || (state.installed && state.installed[TIZENBREW_APP]);
+    if (hasTB) {
+      if (NATIVE) add({ kind: 'app', label: 'TizenBrew', logo: 'TizenBrew', bg: 'linear-gradient(135deg,#1d2a44,#3d5a8a)', fg: '#fff', id: TIZENBREW_APP });
+      var mods = state.modules;
+      if (!mods) mods = [{ name: '@foxreis/tizentube', moduleType: 'npm', appName: 'TizenTube' }];
+      for (var m = 0; m < mods.length; m++) {
+        var md = mods[m];
+        if (String(md.name).indexOf(CFG.selfModule) >= 0 || md.appName === 'TV Home') continue;
+        if (md.appName === 'Unknown Module') continue;
+        var isTT = /tizentube/i.test(md.name);
+        add({ kind: 'module', label: md.appName + ' (TizenBrew)', logo: isTT ? '<span class="glyph">&#9654;</span>&nbsp;TizenTube' : esc(md.appName),
+          bg: isTT ? 'linear-gradient(135deg,#3a0d0d,#b3161b)' : 'linear-gradient(135deg,#1d2a44,#3d5a8a)', fg: '#fff', name: md.name, type: md.moduleType });
+      }
     }
     add({ kind: 'settings', label: 'Home Screen Settings', logo: 'Settings', bg: 'linear-gradient(135deg,#3a3a3c,#636366)', fg: '#fff' });
     state.rows[1] = { el: wrap, items: items };
@@ -266,16 +274,36 @@
     applyFocus();
   }
 
+  function nativeLaunch(item) {
+    try {
+      tizen.application.launch(item.id, function () {}, function (e) {
+        toast('Could not open ' + item.label + (e && e.message ? ': ' + e.message : ''), 4000);
+      });
+    } catch (e) { toast('Could not open ' + item.label + ': ' + e.message, 4000); }
+  }
+
+  // Open a TizenBrew module the way TizenTube's own service does: app control to TizenBrew.
+  function nativeModule(item) {
+    try {
+      var data = [new tizen.ApplicationControlData('module', [JSON.stringify({ moduleName: item.name, moduleType: item.type })])];
+      tizen.application.launchAppControl(
+        new tizen.ApplicationControl('http://tizen.org/appcontrol/operation/view', null, null, null, data),
+        TIZENBREW_APP, function () {}, function (e) { toast('Could not open ' + item.label + ': ' + (e && e.message), 4000); });
+    } catch (e) { toast('Could not open ' + item.label + ': ' + e.message, 4000); }
+  }
+
   function launch(item) {
     if (item.kind === 'settings') return openSettings();
     if (item.kind === 'module') {
       toast('Opening ' + item.label.replace(' (TizenBrew)', '') + '\u2026');
+      if (NATIVE) return nativeModule(item);
       return xhr('GET', CFG.serviceUrl + '/module?name=' + encodeURIComponent(item.name) + '&type=' + encodeURIComponent(item.type), 5000, function (err) {
         if (err) toast('Could not open it: TV Home helper service is not running. Relaunch TizenBrew and try again.', 5000);
       });
     }
     if (item.missing) return toast(item.label + ' is not installed on this TV', 3000);
     toast('Opening ' + item.label + '\u2026');
+    if (NATIVE) return nativeLaunch(item);
     xhr('GET', CFG.serviceUrl + '/launch?id=' + encodeURIComponent(item.id), 5000, function (err, res) {
       if (!err && res && res.ok) return;
       // Fallback: the TV's own REST API (POST /api/v2/applications/<id>). The page cannot read the
@@ -285,13 +313,28 @@
     });
   }
 
+  function setInstalled(apps) {
+    state.installed = {};
+    for (var i = 0; i < apps.length; i++) state.installed[apps[i].id] = apps[i].name;
+    renderApps();
+    if (NATIVE && state.installed[TIZENBREW_APP]) loadModules();
+  }
+
   function probeService() {
+    if (NATIVE) {
+      try {
+        tizen.application.getAppsInfo(function (apps) {
+          var out = [];
+          for (var i = 0; i < apps.length; i++) out.push({ id: apps[i].id, name: apps[i].name });
+          setInstalled(out);
+        }, function () {});
+      } catch (e) {}
+      return;
+    }
     xhr('GET', CFG.serviceUrl + '/apps', 4000, function (err, res) {
       if (!err && res && res.ok && res.apps) {
         state.service = true;
-        state.installed = {};
-        for (var i = 0; i < res.apps.length; i++) state.installed[res.apps[i].id] = res.apps[i].name;
-        renderApps();
+        setInstalled(res.apps);
       } else if (!probeService.tries || probeService.tries < 5) {
         probeService.tries = (probeService.tries || 0) + 1;
         setTimeout(probeService, 1500);  // TizenBrew starts the service when the module launches
@@ -463,18 +506,34 @@
         break;
       }
       case KEY.BACK: case KEY.ESC: case KEY.BKSP:
-        // Home screen: Back just returns focus to the first app tile.
+        // Back returns focus to the first app tile; pressed again there, the native app exits.
+        if (NATIVE && k === KEY.BACK && state.row === 1 && state.col[1] === 0) {
+          try { tizen.application.getCurrentApplication().exit(); } catch (err) {}
+          break;
+        }
         state.row = 1; state.col[1] = 0; applyFocus();
         break;
+      case KEY.RED: loadFeed(); toast('Refreshing calendar\u2026'); break;
+      case KEY.GREEN: openSettings(); break;
       default: return;
     }
     e.preventDefault();
   }
 
   // Exposed for automated tests in a desktop browser.
-  window.__tvhome = { state: state, move: move, render: function () { renderDays(); renderApps(); }, setFeed: function (f) { state.feed = f; renderDays(); } };
+  window.__tvhome = { native: NATIVE, state: state, move: move, render: function () { renderDays(); renderApps(); }, setFeed: function (f) { state.feed = f; renderDays(); } };
+
+  function registerKeys() {
+    if (!NATIVE || !window.tizen.tvinputdevice) return;
+    var keys = ['ColorF0Red', 'ColorF1Green'];
+    for (var i = 0; i < keys.length; i++) {
+      try { tizen.tvinputdevice.registerKey(keys[i]); } catch (e) {}
+    }
+  }
 
   function init() {
+    registerKeys();
+    document.body.className += NATIVE ? ' native' : ' module';
     tickClock();
     setInterval(tickClock, 1000);
     renderDays();
@@ -483,7 +542,9 @@
     loadFeed();
     setInterval(loadFeed, (CFG.refreshMinutes || 5) * 60000);
     probeService();
-    loadModules();
+    if (!NATIVE) loadModules();
+    // Re-scan installed apps when the user comes back to the home screen.
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { probeService(); loadFeed(); } });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

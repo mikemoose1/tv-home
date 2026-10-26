@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns:tizen="http://tizen.org/ns/widgets" xmlns="http://www.w3.org/ns/widgets" id="https://github.com/mikemoose1/tv-home" version="1.1.0" viewmodes="maximized">
+    <tizen:application id="TvHomeMm01.TVHome" package="TvHomeMm01" required_version="3.0"/>
+    <name>TV Home</name>
+    <description>Apple TV-style home screen with app tiles and a family calendar shelf.</description>
+    <content src="index.html"/>
+    <icon src="icon.png"/>
+    <access origin="*" subdomains="true"></access>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.info"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:profile name="tv-samsung"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/prelaunch.support" value="true"/>
+    <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
+</widget>
