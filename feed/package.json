@@ -1,0 +1,1 @@
+{ "name": "tv-home-feed", "private": true, "type": "module", "dependencies": { "skylight-mcp": "1.4.5" } }

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>TV Home</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wallpaper"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="vignette"></div></div>
+<div id="root">
+  <header id="top">
+    <div id="greeting"><div id="hello">Good morning</div><div id="date">&nbsp;</div></div>
+    <div id="clock">--:--</div>
+  </header>
+
+  <section id="shelf">
+    <div class="shelf-head"><span class="shelf-title">Family Calendar</span><span id="cal-status" class="cal-status"></span></div>
+    <div id="days" class="row"></div>
+  </section>
+
+  <section id="apps-section">
+    <div id="apps" class="row"></div>
+    <div id="app-label" class="app-label">&nbsp;</div>
+  </section>
+</div>
+
+<div id="settings" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-title">Home Screen Settings</div>
+    <label class="field-label" for="feed-url">Calendar feed URL</label>
+    <input id="feed-url" class="field focusable-input" type="text" spellcheck="false">
+    <div class="sheet-buttons">
+      <div class="btn" id="btn-save">Save</div>
+      <div class="btn" id="btn-reset">Use default</div>
+      <div class="btn" id="btn-close">Close</div>
+    </div>
+    <div class="hint">Arrow keys move, Enter selects, Back closes.</div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
